@@ -1,0 +1,202 @@
+<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let patients = JSON.parse(localStorage.getItem("patients")) || [];
+            let selectedIndex = localStorage.getItem("selectedPatientIndex");
+    
+            if (!patients[selectedIndex]) {
+                alert("No patient data found.");
+                window.location.href = "list_patients.html";
+                return;
+            }
+    
+            let patient = patients[selectedIndex];
+            document.getElementById("patientName").textContent = patient.name || "N/A";
+            document.getElementById("patientAge").textContent = patient.age || "N/A";
+            document.getElementById("patientPhone").textContent = patient.phone || "N/A";
+    
+            let prescriptionContainer = document.getElementById("prescriptionDetails");
+            prescriptionContainer.innerHTML = "";
+    
+            console.log("Patient Data:", patient); // Debugging
+            console.log("Prescriptions:", patient.prescriptions); // Debugging
+    
+            if (!patient.prescriptions || patient.prescriptions.length === 0) {
+                prescriptionContainer.innerHTML = "<p>No prescriptions recorded.</p>";
+            } else {
+                patient.prescriptions.forEach((prescription, index) => {
+                    console.log("Prescription #", index, prescription); // Debugging each prescription
+    
+                    let prescriptionHTML = `
+                        <div class="prescription-card">
+                            <h3>Prescription #${index + 1} - ${new Date(prescription.timestamp).toLocaleString()}</h3>
+                            <p><strong>Complaints:</strong> ${prescription.complaints || "N/A"}</p>
+                            <p><strong>Allergies:</strong> ${prescription.allergies || "N/A"}</p>
+                            <p><strong>Diagnosis:</strong> ${prescription.diagnosis || "N/A"}</p>
+                            <p><strong>Advice:</strong> ${prescription.advice || "N/A"}</p>
+                            <p><strong>Tests:</strong> ${prescription.tests || "N/A"}</p>
+                            <h4>Medicines</h4>
+                            <ul>
+                                ${prescription.medicines && prescription.medicines.length > 0
+                                    ? prescription.medicines.map(med => 
+                                        `<li><strong>${med.name}</strong> - ${med.dosage} ${med.frequency} (${med.applyOn})</li>`).join("")
+                                    : "<li>No medicines prescribed</li>"}
+                            </ul>
+                        </div>
+                        <hr>
+                    `;
+                    prescriptionContainer.innerHTML += prescriptionHTML;
+                });
+            }
+        });
+    </script>
+
+
+Name        : patient-name (Age, Gender) - Phone number
+Date & Time : date timestamp
+------------------------------------------------------------
+Complaints: patient complaints
+------------------------------------------------------------
+Vitals
+BP: x/x  Temperature: x  Pulse: x  
+
+
+RX
+
+------------------------------------------------------------
+    Medicine        Dosage      Duration     Timing     Qty
+1. medicine1        x-x-x       x days       After x     x
+
+------------------------------------------------------------
+
+Tests (if any) : requested tests
+
+------------------------------------------------------------
+
+Diagnosis (if any): patient diagnosis
+
+
+                                        (image of signature)
+                                         Doctor's Name
+                                         Doctor's title
+
+function addRowListeners() {
+    function addRowIfNeeded() {
+        let tbody = document.querySelector("tbody");
+        let rows = tbody.querySelectorAll("tr");
+        let lastRow = rows[rows.length - 1];
+
+        let isLastRowFilled = Array.from(lastRow.children).some(td => td.textContent.trim() !== "");
+
+        if (isLastRowFilled) {
+            let newRow = document.createElement("tr");
+            for (let i = 0; i < lastRow.children.length; i++) {
+                let newCell = document.createElement("td");
+                newCell.setAttribute("contenteditable", "true");
+                newCell.addEventListener("input", addRowIfNeeded);
+                newRow.appendChild(newCell);
+            }
+            tbody.appendChild(newRow);
+        }
+    }
+
+    document.querySelectorAll("tbody td").forEach(cell => {
+        cell.setAttribute("contenteditable", "true");
+        cell.addEventListener("input", addRowIfNeeded);
+    });
+}
+
+function getLastPatientData() {
+    let patients = JSON.parse(localStorage.getItem("patients")) || [];
+
+    if (patients.length === 0) {
+        alert("No patient data found!");
+        return;
+    }
+
+    let lastPatient = patients[patients.length - 1];
+
+    // Check if patientName element exists before setting content
+    let patientNameElement = document.getElementById("patientName");
+    if (patientNameElement) {
+        patientNameElement.textContent = lastPatient.name;
+    } else {
+        console.warn("No #patientName element found in the document.");
+    }
+}
+
+function savePrescription() {
+    let patients = JSON.parse(localStorage.getItem("patients")) || [];
+    let selectedIndex = localStorage.getItem("selectedPatientIndex");
+
+    if (selectedIndex === null || !patients[selectedIndex]) {
+        alert("Error: No patient selected.");
+        return;
+    }
+
+    let prescription = {
+        complaints: document.querySelector(".Complaints").value,
+        vitals: {
+            bp: document.querySelector(".BP").value,
+            pulse: document.querySelector(".bpm").value,
+            spo2: document.querySelector(".spo2").value,
+            height: document.querySelector(".height").value,
+            weight: document.querySelector(".weight").value,
+            bmi: document.querySelector(".bmi").value,
+            temperature: document.querySelector(".Temperature").value
+        },
+        allergies: document.querySelector(".Allergies").value,
+        pastMedicalHistory: document.querySelector(".past").value,
+        familyHistory: document.querySelector(".family-history").value,
+        diagnosis: document.querySelector(".Diagnosis").value,
+        advice: document.querySelector(".Advice").value,
+        tests: document.querySelector(".tests").value,
+        medicines: getMedicineTableData(),
+        timestamp: new Date().toISOString() // Store timestamp
+    };
+
+    // Ensure `prescriptions` array exists
+    if (!patients[selectedIndex].prescriptions) {
+        patients[selectedIndex].prescriptions = [];
+    }
+
+    // Push new prescription
+    patients[selectedIndex].prescriptions.push(prescription);
+
+    // Save updated patients list
+    localStorage.setItem("patients", JSON.stringify(patients));
+
+    console.log("Saved prescription:", prescription);
+    alert("Prescription saved successfully!");
+}
+
+
+function getMedicineTableData() {
+    let rows = document.querySelectorAll("tbody tr");
+    let medicines = [];
+
+    rows.forEach(row => {
+        let cells = row.querySelectorAll("td");
+
+        if (cells.length < 7) {
+            console.warn("Row does not have enough columns:", row);
+            return;
+        }
+
+        let medicine = {
+            type: cells[0].textContent.trim(),
+            name: cells[1].textContent.trim(),
+            dosage: cells[2].textContent.trim(),
+            time: cells[3].textContent.trim(),
+            applyOn: cells[4].textContent.trim(),
+            frequency: cells[5].textContent.trim(),
+            quantity: cells[6].textContent.trim()
+        };
+
+        // Only add medicine if at least one field is filled
+        if (Object.values(medicine).some(val => val !== "")) {
+            medicines.push(medicine);
+        }
+    });
+
+    return medicines;
+}

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Prescription</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",  // REMOVE FROM CLIENT SIDE
+            authDomain: "clinicdata-5fb75.firebaseapp.com",
+            projectId: "clinicdata-5fb75",
+            storageBucket: "clinicdata-5fb75.appspot.com",
+            messagingSenderId: "792915969433",
+            appId: "1:792915969433:web:7dbd4ebb71d088fd973f08",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let pdfData = null;
+
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            let pdfDoc = new jsPDF();
+            let presIndex = localStorage.getItem("printPrescriptionIndex") || 0;
+            let patientId = localStorage.getItem("selectedPatientId");
+
+            if (!patientId) {
+                alert("No patient ID found.");
+                return;
+            }
+
+            const patientDoc = await getDoc(doc(db, "patients", patientId));
+            if (!patientDoc.exists()) {
+                alert("Patient not found.");
+                return;
+            }
+
+            let patient = patientDoc.data();
+            let prescription = patient.prescriptions[presIndex];
+            if (!prescription) {
+                alert("No prescription found.");
+                return;
+            }
+
+            let dateTime = new Date(prescription.timestamp).toLocaleString();
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.text(`Name: ${patient.name} (Age: ${patient.age}) - ${patient.phone}`, 10, 20);
+            pdfDoc.text(`Date & Time: ${dateTime}`, 10, 30);
+            pdfDoc.line(10, 35, 200, 35);
+
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.text("Complaints:", 10, 45);
+            pdfDoc.setFont("helvetica", "normal");
+            pdfDoc.text(prescription.complaints || "N/A", 10, 55);
+            pdfDoc.line(10, 60, 200, 60);
+
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.text("Vitals", 10, 70);
+            pdfDoc.setFont("helvetica", "normal");
+            pdfDoc.text(`BP: ${prescription.bp || "N/A"}   Temp: ${prescription.temperature || "N/A"}   Pulse: ${prescription.pulse || "N/A"}`, 10, 80);
+            pdfDoc.line(10, 85, 200, 85);
+
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.text("RX", 10, 95);
+            pdfDoc.line(10, 100, 200, 100);
+            pdfDoc.text("Medicine        Dosage    Duration    Timing   Qty", 10, 110);
+            pdfDoc.line(10, 115, 200, 115);
+            pdfDoc.setFont("helvetica", "normal");
+
+            let y = 125;
+            if (prescription.medicines && prescription.medicines.length > 0) {
+                prescription.medicines.forEach((med, index) => {
+                    pdfDoc.text(`${index + 1}. ${med.name}    ${med.dosage}    ${med.duration} days    ${med.applyOn}    ${med.qty}`, 10, y);
+                    y += 10;
+                });
+            } else {
+                pdfDoc.text("No medicines prescribed", 10, y);
+                y += 10;
+            }
+            pdfDoc.line(10, y, 200, y);
+            y += 10;
+
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.text("Tests (if any):", 10, y);
+            pdfDoc.setFont("helvetica", "normal");
+            pdfDoc.text(prescription.tests || "N/A", 10, y + 10);
+            pdfDoc.line(10, y + 15, 200, y + 15);
+            y += 25;
+
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.text("Diagnosis (if any):", 10, y);
+            pdfDoc.setFont("helvetica", "normal");
+            pdfDoc.text(prescription.diagnosis || "N/A", 10, y + 10);
+            pdfDoc.line(10, y + 15, 200, y + 15);
+            y += 25;
+
+            pdfData = pdfDoc.output("arraybuffer");
+            let pdfURL = URL.createObjectURL(new Blob([pdfData], { type: "application/pdf" }));
+            document.getElementById("pdfPreview").src = pdfURL;
+        }
+
+        function downloadPDF() {
+            if (!pdfData) {
+                alert("Please generate the PDF first!");
+                return;
+            }
+
+            let blob = new Blob([pdfData], { type: "application/pdf" });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "prescription.pdf";
+            link.click();
+        }
+        window.generatePDF = generatePDF;
+window.downloadPDF = downloadPDF;
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        iframe { width: 100%; height: 500px; border: 1px solid #ccc; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Prescription Details</h2>
+    <button onclick="generatePDF()">Generate PDF</button>
+    <button onclick="downloadPDF()">Download PDF</button>
+    <iframe id="pdfPreview"></iframe>
+</body>
+</html>

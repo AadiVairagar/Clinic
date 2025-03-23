@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            width: 60%;
+            margin: auto;
+            box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+        }
+        h2, h3 {
+            color: #d0d0d0;
+        }
+        .section {
+            margin-top: 15px;
+            padding: 10px;
+            border-bottom: 1px solid #3a3a3a;
+            text-align: left;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .delete-btn, .back {
+            background-color: #c9302c;
+        }
+        .delete-btn:hover, .back:hover {
+            background-color: #a52a2a;
+        }
+        .print-btn {
+            background-color: #54adc8;
+        }
+        .print-btn:hover {
+            background-color: #428fa7;
+        }
+        .new-pres {
+            background-color: rgb(84, 167, 139);
+        }
+        .new-pres:hover {
+            background-color: rgb(72, 141, 118);
+        }
+    </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",  // REMOVE FROM CLIENT SIDE
+            authDomain: "clinicdata-5fb75.firebaseapp.com",
+            projectId: "clinicdata-5fb75",
+            storageBucket: "clinicdata-5fb75.appspot.com",
+            messagingSenderId: "792915969433",
+            appId: "1:792915969433:web:7dbd4ebb71d088fd973f08",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const patientId = localStorage.getItem("selectedPatientId");
+
+            if (!patientId) {
+                alert("Patient ID not found.");
+                return;
+            }
+
+            try {
+                const patientDoc = await getDoc(doc(db, "patients", patientId));
+
+                if (!patientDoc.exists()) {
+                    alert("Patient not found in database.");
+                    return;
+                }
+
+                const patientData = patientDoc.data();
+
+                document.getElementById("patientName").textContent = patientData.name;
+                document.getElementById("patientAge").textContent = patientData.age;
+                document.getElementById("patientPhone").textContent = patientData.phone;
+
+                const prescriptionContainer = document.getElementById("prescriptionDetails");
+                prescriptionContainer.innerHTML = "";
+
+                if (patientData.prescriptions && patientData.prescriptions.length > 0) {
+                    patientData.prescriptions.forEach((prescription, index) => {
+                        const prescriptionDiv = document.createElement("div");
+                        prescriptionDiv.classList.add("prescription-item");
+
+                        prescriptionDiv.innerHTML = `
+                            <h3>Prescription #${index + 1}</h3>
+                            <p><strong>Complaints:</strong> ${prescription.complaints || "N/A"}</p>
+                            <p><strong>Allergies:</strong> ${prescription.allergies || "N/A"}</p>
+                            <p><strong>Diagnosis:</strong> ${prescription.diagnosis || "N/A"}</p>
+                            <p><strong>Advice:</strong> ${prescription.advice || "N/A"}</p>
+                            <p><strong>Tests:</strong> ${prescription.tests || "N/A"}</p>
+                        `;
+
+                        if (prescription.vitals) {
+                            const vitalsString = Object.entries(prescription.vitals)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join(", ");
+                            prescriptionDiv.innerHTML += `<p><strong>Vitals:</strong> ${vitalsString}</p>`;
+                        }
+
+                        if (prescription.medicines && prescription.medicines.length > 0) {
+                            const medicinesList = document.createElement("ul");
+                            prescription.medicines.forEach(medicine => {
+                                const medicineItem = document.createElement("li");
+                                medicineItem.textContent = `${medicine.name} - ${medicine.dosage} (${medicine.time})`;
+                                medicinesList.appendChild(medicineItem);
+                            });
+                            prescriptionDiv.appendChild(medicinesList);
+                        }
+
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "Delete";
+                        deleteButton.classList.add("delete-btn");
+                        deleteButton.onclick = () => deletePrescription(patientId, index);
+
+                        const printButton = document.createElement("button");
+                        printButton.textContent = "Print";
+                        printButton.classList.add("print-btn");
+                        printButton.onclick = () => {
+                            localStorage.setItem("printPrescriptionIndex", index);
+                            window.location.href = "print.html";
+                        };
+
+                        prescriptionDiv.appendChild(deleteButton);
+                        prescriptionDiv.appendChild(printButton);
+                        prescriptionContainer.appendChild(prescriptionDiv);
+                    });
+                } else {
+                    prescriptionContainer.innerHTML = "<p>No prescriptions found.</p>";
+                }
+            } catch (error) {
+                console.error("Error fetching prescription details:", error);
+                alert("Failed to load prescription details.");
+            }
+        });
+
+        async function deletePrescription(patientId, index) {
+            try {
+                const patientDocRef = doc(db, "patients", patientId);
+                const patientDoc = await getDoc(patientDocRef);
+                if (!patientDoc.exists()) return;
+
+                let patientData = patientDoc.data();
+                if (!patientData.prescriptions || patientData.prescriptions.length <= index) return;
+
+                patientData.prescriptions.splice(index, 1);
+                await updateDoc(patientDocRef, { prescriptions: patientData.prescriptions });
+
+                alert("Prescription deleted successfully.");
+                location.reload();
+            } catch (error) {
+                console.error("Error deleting prescription:", error);
+                alert("Failed to delete prescription.");
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>Prescription Details</h2>
+        <div class="section">
+            <h3>Patient Info</h3>
+            <p><strong>Name:</strong> <span id="patientName"></span></p>
+            <p><strong>Age:</strong> <span id="patientAge"></span></p>
+            <p><strong>Phone:</strong> <span id="patientPhone"></span></p>
+        </div>
+        <div class="section" id="prescriptionDetails"></div>
+        <button onclick="window.location.href='history.html'" class="back">Back to List</button>
+        <button onclick="window.location.href='pres.html'" class="new-pres">New Prescription</button>
+    </div>
+</body>
+</html>

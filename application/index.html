@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The KFC was nice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #3d3d3d;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        button {
+            background-color: rgb(77, 148, 124);
+            color: #ffffff;
+            border: none;
+            height: 64px;
+            font-size: 16px;
+            width: 156px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: rgb(112, 221, 185);
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+    <script>
+        function go(x) {
+            window.location.href = x;
+        }
+    </script>
+</head>
+<body>
+
+    <div class="button-container">
+        <button onclick="go('New.html')">New Patient</button>
+        <button onclick="go('history.html')">Existing Patients</button>
+    </div>
+
+    <p class="footer">If you can read this, gimmie 70% dark chocolate</p>
+
+</body>
+</html>

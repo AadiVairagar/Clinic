@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gimmie Dark Chocolate</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 320px;
+            text-align: center;
+        }
+        .title {
+            font-size: 18px;
+            margin-top: 8PX;
+            margin-bottom: 10PX;
+        }
+        input, button {
+            width: 90%;
+            padding: 8px;
+            margin: 5px 0;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        input {
+            background: #545454;
+            color: #fff;
+        }
+        button {
+            background: #545454;
+            color: white;
+            cursor: pointer;
+            transition: 0.5s;
+        }
+        button:hover {
+            background: rgb(61, 119, 99);
+        }
+        .male {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .male:hover {
+            background: rgb(116, 177, 215);
+        }
+        .female:hover {
+            background: rgb(160, 94, 193);
+        }
+        .lol:hover {
+            background: rgb(191, 179, 164);
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        .button-group button {
+            width: 30%;
+        }
+        .input-group {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        .input-group input {
+            width: 40%;
+        }
+        input::placeholder {
+            color: rgb(211, 208, 208);  /* Change this to your preferred color */
+        }
+        .submit {
+            width: 95%;
+            margin-top: 24px;
+            background-color: rgb(91, 180, 150);
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+    </style>
+    
+</head>
+<body>
+    <div class="container">
+        <p class="title">Patient Name</p>
+        <input id="name" placeholder="Enter name">
+        <p class="title">Phone Number</p>
+        <input id="number" placeholder="Enter phone number">
+        <p class="title">Gender</p>
+        <div class="button-group">
+            <button class="male">Male</button>
+            <button class="female">Female</button>
+            <button class="lol">Other</button>
+        </div>
+        <p class="title">Age & Date of Birth</p>
+        <div class="input-group">
+            <input type="number" id="age" oninput="updateDOB()" placeholder="Age">
+            <input type="date" id="dob" oninput="updateAge()">
+        </div>
+        <p class="title">Preferred Language</p>
+        <input id="lang" placeholder="Enter language">
+        <p class="title">Address</p>
+        <input id="Address" placeholder="Enter address">
+        <button class="submit" onclick="saveToCloud()">Submit</button>  
+    </div>
+    <script type="module">
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+    
+        // Firebase configuration (DO NOT expose API key in production)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPpMIV9fMjVCmpvi2YqX91_xha0EkGH14", // REMOVE THIS IN PRODUCTION
+            authDomain: "clinicdata-5fb75.firebaseapp.com",
+            projectId: "clinicdata-5fb75",
+            storageBucket: "clinicdata-5fb75.firebasestorage.app",
+            messagingSenderId: "792915969433",
+            appId: "1:792915969433:web:7dbd4ebb71d088fd973f08",
+            measurementId: "G-TX0B8X9SVL"
+        };
+    
+        // Initialize Firebase app and Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+    
+        // Age and DOB functions
+        window.updateDOB = function() { //Make them global.
+            let ageInput = document.getElementById("age").value;
+            if (ageInput) {
+                let today = new Date();
+                let birthYear = today.getFullYear() - ageInput;
+                let dob = new Date(birthYear, today.getMonth(), today.getDate());
+                document.getElementById("dob").value = dob.toISOString().split('T')[0];
+            }
+        }
+    
+        window.updateAge = function() { //Make them global.
+            let dobInput = document.getElementById("dob").value;
+            if (dobInput) {
+                let birthDate = new Date(dobInput);
+                let today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                let monthDiff = today.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                document.getElementById("age").value = age;
+            }
+        }
+    
+        // Save to Firestore function
+        window.saveToCloud = async function() { //Make it global.
+            let newPatient = {
+                name: document.getElementById("name").value,
+                phone: document.getElementById("number").value,
+                gender: getSelectedGender(),
+                age: document.getElementById("age").value,
+                dob: document.getElementById("dob").value,
+                prescription: [],
+                language: document.getElementById("lang").value,
+                address: document.getElementById("Address").value,
+                timestamp: new Date().toISOString()
+            };
+    
+            try {
+                const docRef = await addDoc(collection(db, "patients"), newPatient);
+                alert("Patient added successfully! 🎉");
+                console.log("Document ID:", docRef.id);
+                window.location.href = "index.html"
+            } catch (error) {
+                console.error("Error adding patient:", error);
+                alert("Failed to save patient. Please try again.");
+            }
+        }
+    
+        // Gender selection functions
+        function getSelectedGender() {
+            let buttons = document.querySelectorAll(".button-group button");
+            for (let button of buttons) {
+                if (button.classList.contains("selected")) {
+                    return button.textContent;
+                }
+            }
+            return "Not specified";
+        }
+    
+        function setSelectedGender(gender) {
+            let buttons = document.querySelectorAll(".button-group button");
+            buttons.forEach(button => {
+                if (button.textContent === gender) {
+                    button.classList.add("selected");
+                } else {
+                    button.classList.remove("selected");
+                }
+            });
+        }
+    
+        // Clear form function
+        function clearForm() {
+            document.getElementById("name").value = "";
+            document.getElementById("number").value = "";
+            document.getElementById("age").value = "";
+            document.getElementById("dob").value = "";
+            document.getElementById("lang").value = "";
+            document.getElementById("Address").value = "";
+            let buttons = document.querySelectorAll(".button-group button");
+            buttons.forEach(button => button.classList.remove("selected"));
+        }
+    
+        // Event listeners
+        document.addEventListener("DOMContentLoaded", () => {
+            let buttons = document.querySelectorAll(".button-group button");
+            buttons.forEach(button => {
+                button.addEventListener("click", function () {
+                    buttons.forEach(btn => btn.classList.remove("selected"));
+                    this.classList.add("selected");
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>

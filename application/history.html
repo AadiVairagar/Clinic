@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            text-align: center;
+            padding: 20px;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #1e1e1e;
+            box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            border: 1px solid #3a3a3a;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #2a2a2a;
+            color: #d0d0d0;
+        }
+        td {
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out;
+        }
+        td:hover {
+            background-color: #333;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: rgb(77, 148, 124);
+            color: white;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        button:hover {
+            background-color: rgb(112, 221, 185);
+        }
+    </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+    
+        const firebaseConfig = {
+            // Your Firebase config here. REMOVE API KEYS FROM CLIENT SIDE CODE.
+            apiKey: "AIzaSyCPpMIV9fMjVCmpvi2YqX91_xha0EkGH14", //REMOVE THIS!
+            authDomain: "clinicdata-5fb75.firebaseapp.com",
+            projectId: "clinicdata-5fb75",
+            storageBucket: "clinicdata-5fb75.firebasestorage.app",
+            messagingSenderId: "792915969433",
+            appId: "1:792915969433:web:7dbd4ebb71d088fd973f08",
+            measurementId: "G-TX0B8X9SVL"
+        };
+    
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+    
+        document.addEventListener("DOMContentLoaded", () => {
+            let tableBody = document.querySelector("tbody");
+            let searchInput = document.getElementById("search");
+            let searchType = document.getElementById("searchType");
+            let patientsData = []; // Store fetched patient data
+    
+            async function fetchPatients() {
+                try {
+                    const querySnapshot = await getDocs(collection(db, "patients"));
+                    patientsData = querySnapshot.docs.map(doc => ({
+                        id: doc.id, // Store document ID
+                        ...doc.data()
+                    }));
+                    displayPatients();
+                } catch (error) {
+                    console.error("Error fetching patients:", error);
+                    tableBody.innerHTML = "<tr><td colspan='5'>Error loading patients.</td></tr>";
+                }
+            }
+    
+            function displayPatients(filter = "", type = "name") {
+                tableBody.innerHTML = "";
+                let filteredPatients = patientsData.filter(patient =>
+                    patient[type]?.toLowerCase().includes(filter.toLowerCase())
+                );
+    
+                if (filteredPatients.length === 0) {
+                    tableBody.innerHTML = "<tr><td colspan='5'>No registered patients.</td></tr>";
+                    return;
+                }
+    
+                filteredPatients.forEach(patient => {
+                    let row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${patient.name}</td>
+                        <td>${patient.age}</td>
+                        <td>${patient.phone}</td>
+                        <td>
+                            <button onclick="window.viewPrescription('${patient.id}')">View History</button>
+                            <button onclick="window.deletePatient('${patient.id}')">Delete</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+    
+            searchInput.addEventListener("input", () => {
+                displayPatients(searchInput.value, searchType.value);
+            });
+    
+            searchType.addEventListener("change", () => {
+                displayPatients(searchInput.value, searchType.value);
+            });
+    
+            fetchPatients(); // Initial fetch and display
+        });
+    
+        window.viewPrescription = function (patientId) {
+            localStorage.setItem("selectedPatientId", patientId);
+            window.location.href = "prescription_details.html";
+        };
+    
+        window.deletePatient = async function (patientId) {
+            if (confirm("Are you sure you want to delete this patient?")) {
+                try {
+                    await deleteDoc(doc(db, "patients", patientId));
+                    alert("Patient deleted successfully.");
+                    window.location.reload();
+                } catch (error) {
+                    console.error("Error deleting patient:", error);
+                    alert("Failed to delete patient.");
+                }
+            }
+        };
+    </script>
+</head>
+<body>
+    <h2>Registered Patients</h2>
+    <div class="search-container">
+        <input type="text" id="search" placeholder="Search patients...">
+        <select id="searchType">
+            <option value="name">Search by Name</option>
+            <option value="phone">Search by Phone</option>
+        </select>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</body>
+</html>
